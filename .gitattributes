@@ -1,0 +1,16 @@
+# 仓库内统一使用 LF，检出时由 Git 按平台决定
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary
+*.avif binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.ico binary
+
+# 锁文件不参与合并（避免冲突噪音）
+package-lock.json -diff linguist-generated

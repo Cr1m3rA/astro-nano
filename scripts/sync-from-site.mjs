@@ -29,6 +29,7 @@ const MIRROR_DIRS = [
 
 const MIRROR_FILES = [
   ".gitignore",
+  ".gitattributes",
   ".eslintrc.cjs",
   ".eslintignore",
   "astro.config.mjs",
