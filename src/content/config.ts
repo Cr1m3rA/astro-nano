@@ -17,6 +17,8 @@ const diary = defineCollection({
     date: z.coerce.date(),
     author: z.string().optional(),
     draft: z.boolean().optional(),
+    // 永不公开：即使超过 DIARY_PUBLIC_AFTER_YEARS 年也保持加密，只能靠密码解锁
+    private: z.boolean().optional(),
   }),
 });
 

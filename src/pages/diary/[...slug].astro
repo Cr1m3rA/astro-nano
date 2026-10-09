@@ -6,7 +6,7 @@ import BackToPrev from "@components/BackToPrev.astro";
 import Byline from "@components/Byline.astro";
 import DiaryVault from "@components/DiaryVault.astro";
 import { formatFullDate } from "@lib/utils";
-import { isDiaryPublic } from "@lib/diary";
+import { isDiaryUnlocked } from "@lib/diary";
 import { VAULT_START, VAULT_END } from "@lib/vault";
 
 export async function getStaticPaths() {
@@ -24,7 +24,7 @@ type Props = CollectionEntry<"diary">;
 const entry = Astro.props;
 const { Content } = await entry.render();
 const title = formatFullDate(entry.data.date);
-const unlocked = isDiaryPublic(entry.data.date);
+const unlocked = isDiaryUnlocked(entry.data);
 ---
 
 <PageLayout title={title} description={title}>

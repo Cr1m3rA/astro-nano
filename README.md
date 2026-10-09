@@ -50,6 +50,7 @@ npm run preview  # 预览构建产物
 - **密码来源**：`DIARY_PASSWORD` 环境变量，或 `.env.local` / `.env`
 - **fail-closed**：存在待加密日记却没提供密码时，构建直接失败，避免明文误发布
 - **自动公开**：超过 `DIARY_PUBLIC_AFTER_YEARS`（默认 3 年）的日记按规则公开，不再需要密码，同时进入 sitemap
+- **永不公开**：frontmatter 写 `private: true` 的日记不参与自动公开，永远保持加密，也永远不进 sitemap
 
 仓库里的 Markdown 始终是明文，所以**存放内容的仓库必须私有**。另外密码强度决定实际安全性，弱口令仍可能被离线暴力破解。
 
@@ -103,7 +104,7 @@ npm run preview  # 预览构建产物
 | 集合 | 路径 | 说明 |
 | :--- | :--- | :--- |
 | `blog` | `src/content/blog/<slug>/index.md` | `title` `date` 必需 |
-| `diary` | `src/content/diary/<YYYY-MM-DD>/index.md` | 只有 `date`，目录名必须是日期 |
+| `diary` | `src/content/diary/<YYYY-MM-DD>/index.md` | 只有 `date`（要永久锁住就加 `private: true`），目录名必须是日期 |
 | `photography` | `src/content/photography/<slug>/index.mdx` | 图片放同一目录，正文用 `<Photo>` / `<PhotoGrid>` |
 | `pages` | `src/content/pages/*.md` | 独立页面，目前是 `about.md` |
 
