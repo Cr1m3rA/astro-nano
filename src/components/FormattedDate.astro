@@ -1,17 +1,14 @@
 ---
+import { formatDateRange } from "@lib/utils";
+
 interface Props {
   date: Date;
+  end?: Date;
 }
 
-const { date } = Astro.props;
+const { date, end } = Astro.props;
 ---
 
 <time datetime={date.toISOString()}>
-  {
-    date.toLocaleDateString("en-us", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
+  {formatDateRange(date, end)}
 </time>

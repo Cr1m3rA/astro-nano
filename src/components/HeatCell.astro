@@ -1,0 +1,22 @@
+---
+import type { ActivityCell } from "@lib/activity";
+import { LEVEL_CLASSES } from "@lib/activity";
+import { cn } from "@lib/utils";
+
+type Props = {
+  cell: ActivityCell;
+  class?: string;
+};
+
+const { cell, class: className } = Astro.props;
+---
+
+<span
+  title={cell.tooltip}
+  class={cn(
+    "block size-[11px] shrink-0 rounded-[2px]",
+    LEVEL_CLASSES[cell.level],
+    cell.future && "opacity-30",
+    className
+  )}
+></span>

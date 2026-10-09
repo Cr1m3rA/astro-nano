@@ -1,0 +1,31 @@
+---
+import FormattedDate from "@components/FormattedDate.astro";
+import { SITE } from "@consts";
+import { readingTime } from "@lib/utils";
+
+type Props = {
+  date?: Date;
+  dateEnd?: Date;
+  author?: string;
+  body?: string;
+};
+
+const { date, dateEnd, author = SITE.AUTHOR, body } = Astro.props;
+const minutes = body ? readingTime(body) : undefined;
+---
+
+<div class="animate flex flex-wrap items-center gap-x-1.5 font-base text-sm">
+  {date && <FormattedDate date={date} end={dateEnd} />}
+  {author && (
+    <>
+      {date && <span aria-hidden="true">&bull;</span>}
+      <span>{author}</span>
+    </>
+  )}
+  {minutes && (
+    <>
+      {(date || author) && <span aria-hidden="true">&bull;</span>}
+      <span>{minutes}</span>
+    </>
+  )}
+</div>

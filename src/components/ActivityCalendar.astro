@@ -1,0 +1,180 @@
+---
+import { getCollection } from "astro:content";
+import HeatCell from "@components/HeatCell.astro";
+import {
+  LEVEL_CLASSES,
+    buildDayGrid,
+    buildMonthRows,
+    buildYearCells,
+    summarize,
+    type ActivityRecord,
+  } from "@lib/activity";
+import { countWords } from "@lib/utils";
+
+type Props = {
+  weeks?: number;
+};
+
+const { weeks = 53 } = Astro.props;
+
+const WEEKDAY_LABELS = ["一", "", "三", "", "五", "", ""];
+const MONTH_LABELS = Array.from({ length: 12 }, (_, index) => index + 1);
+const TOGGLE_CLASS =
+  "cursor-pointer select-none rounded-full border border-black/15 px-3 py-1 text-sm transition-colors duration-300 ease-in-out hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5";
+
+const [blog, diary, photography] = await Promise.all([
+  getCollection("blog"),
+  getCollection("diary"),
+  getCollection("photography"),
+]);
+
+const records: ActivityRecord[] = [...blog, ...diary, ...photography]
+  .filter((entry) => !entry.data.draft)
+  .map((entry) => ({ date: entry.data.date, words: countWords(entry.body) }));
+
+const dayGrid = buildDayGrid(records, weeks);
+const monthRows = buildMonthRows(records);
+const yearCells = buildYearCells(records);
+const summary = summarize(records);
+---
+
+<section class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <p class="text-sm">
+      共 {summary.entries} 篇 {`·`} {summary.words.toLocaleString("zh-CN")} 字
+      {`·`} {summary.activeDays} 个活跃日
+    </p>
+    <div class="flex items-center gap-1 text-xs opacity-60">
+      <span>少</span>
+      {
+        LEVEL_CLASSES.map((level) => (
+          <span class={`block size-[11px] rounded-[2px] ${level}`} />
+        ))
+      }
+      <span>多</span>
+    </div>
+  </div>
+
+  <input
+    type="radio"
+    name="afterword-activity"
+    id="afterword-activity-day"
+    class="peer/aw-day sr-only"
+    checked
+  />
+  <input
+    type="radio"
+    name="afterword-activity"
+    id="afterword-activity-month"
+    class="peer/aw-month sr-only"
+  />
+  <input
+    type="radio"
+    name="afterword-activity"
+    id="afterword-activity-year"
+    class="peer/aw-year sr-only"
+  />
+
+  <div class="flex gap-1">
+    <label
+      for="afterword-activity-day"
+      class={`${TOGGLE_CLASS} peer-checked/aw-day:border-transparent peer-checked/aw-day:bg-black peer-checked/aw-day:text-white peer-checked/aw-day:dark:bg-white peer-checked/aw-day:dark:text-black peer-focus-visible/aw-day:ring-2 peer-focus-visible/aw-day:ring-black/30 peer-focus-visible/aw-day:dark:ring-white/40`}
+      >日</label
+    >
+    <label
+      for="afterword-activity-month"
+      class={`${TOGGLE_CLASS} peer-checked/aw-month:border-transparent peer-checked/aw-month:bg-black peer-checked/aw-month:text-white peer-checked/aw-month:dark:bg-white peer-checked/aw-month:dark:text-black peer-focus-visible/aw-month:ring-2 peer-focus-visible/aw-month:ring-black/30 peer-focus-visible/aw-month:dark:ring-white/40`}
+      >月</label
+    >
+    <label
+      for="afterword-activity-year"
+      class={`${TOGGLE_CLASS} peer-checked/aw-year:border-transparent peer-checked/aw-year:bg-black peer-checked/aw-year:text-white peer-checked/aw-year:dark:bg-white peer-checked/aw-year:dark:text-black peer-focus-visible/aw-year:ring-2 peer-focus-visible/aw-year:ring-black/30 peer-focus-visible/aw-year:dark:ring-white/40`}
+      >年</label
+    >
+  </div>
+
+  <div class="hidden peer-checked/aw-day:block">
+    <div class="overflow-x-auto pb-1">
+      <div class="w-max">
+        <div
+          class="flex h-3.5 gap-[3px] pl-[19px] text-[10px] leading-[11px] opacity-60"
+        >
+          {
+            dayGrid.weeks.map((_, index) => {
+              const label = dayGrid.monthLabels.find(
+                (item) => item.index === index
+              );
+              return (
+                <span class="relative w-[11px] shrink-0">
+                  {label && (
+                    <span class="absolute left-0 top-0 whitespace-nowrap">
+                      {label.label}
+                    </span>
+                  )}
+                </span>
+              );
+            })
+          }
+        </div>
+        <div class="flex gap-[3px]">
+          <div
+            class="flex w-4 shrink-0 flex-col gap-[3px] text-[10px] opacity-60"
+          >
+            {
+              WEEKDAY_LABELS.map((label) => (
+                <span class="h-[11px] leading-[11px]">{label}</span>
+              ))
+            }
+          </div>
+          {
+            dayGrid.weeks.map((week) => (
+              <div class="flex flex-col gap-[3px]">
+                {week.map((cell) => (
+                  <HeatCell cell={cell} />
+                ))}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hidden peer-checked/aw-month:block">
+    <div class="space-y-[3px]">
+      <div class="flex items-center gap-[3px]">
+        <span class="w-10 shrink-0"></span>
+        {
+          MONTH_LABELS.map((label) => (
+            <span class="w-5 shrink-0 text-center text-[10px] opacity-60">
+              {label}
+            </span>
+          ))
+        }
+      </div>
+      {
+        monthRows.map((row) => (
+          <div class="flex items-center gap-[3px]">
+            <span class="w-10 shrink-0 text-xs opacity-60">{row.year}</span>
+            {row.cells.map((cell) => (
+              <HeatCell cell={cell} class="size-5 rounded-[3px]" />
+            ))}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="hidden peer-checked/aw-year:block">
+    <div class="flex flex-wrap gap-3">
+      {
+        yearCells.map((cell) => (
+          <div class="flex flex-col items-center gap-1">
+            <HeatCell cell={cell} class="size-12 rounded-md" />
+            <span class="text-[10px] opacity-60">{cell.key}</span>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,162 @@
+---
+type Props = {
+  slug: string;
+};
+
+const { slug } = Astro.props;
+---
+
+<div class="animate space-y-4" data-diary-vault data-diary-slug={slug} hidden>
+  <form class="space-y-3" data-diary-form>
+    <label class="block text-sm" for={`diary-password-${slug}`}>
+      这篇日记已加密，输入密码查看正文。
+    </label>
+    <div class="flex flex-wrap gap-2">
+      <input
+        id={`diary-password-${slug}`}
+        type="password"
+        autocomplete="current-password"
+        class="min-w-0 flex-1 rounded border border-black/15 bg-transparent px-3 py-1.5 text-sm outline-none transition-colors duration-300 ease-in-out focus:border-black/40 dark:border-white/20 dark:focus:border-white/50"
+        data-diary-password
+      />
+      <button
+        type="submit"
+        class="shrink-0 rounded border border-black/15 px-3 py-1.5 text-sm transition-colors duration-300 ease-in-out hover:bg-black/5 hover:text-black hover:dark:text-white dark:border-white/20 dark:hover:bg-white/5"
+        data-diary-submit
+      >
+        解密
+      </button>
+    </div>
+    <p class="text-sm" data-diary-status role="status" aria-live="polite"></p>
+  </form>
+</div>
+
+<div class="animate" data-diary-content hidden></div>
+
+<script>
+  import { decryptText, type VaultPayload } from "@lib/vault";
+
+  const ATTRIBUTE = "data-afterword-vault-payload";
+
+  function readPayload(): VaultPayload | undefined {
+    const node = document.querySelector<HTMLScriptElement>(`script[${ATTRIBUTE}]`);
+    if (!node?.textContent) {
+      return undefined;
+    }
+    try {
+      return JSON.parse(atob(node.textContent)) as VaultPayload;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function decryptAll(password: string): Promise<string> {
+    const nodes = document.querySelectorAll<HTMLScriptElement>(
+      `script[${ATTRIBUTE}]`
+    );
+    const parts: string[] = [];
+
+    for (const node of nodes) {
+      if (!node.textContent) {
+        continue;
+      }
+      const payload = JSON.parse(atob(node.textContent)) as VaultPayload;
+      parts.push(await decryptText(payload, password));
+    }
+
+    return parts.join("");
+  }
+
+  async function initDiaryVault() {
+    const root = document.querySelector<HTMLElement>("[data-diary-vault]");
+    const content = document.querySelector<HTMLElement>("[data-diary-content]");
+    if (!root || !content) {
+      return;
+    }
+
+    const payload = readPayload();
+
+    if (!payload) {
+      root.hidden = true;
+      return;
+    }
+
+    root.hidden = false;
+
+    const slug = root.dataset.diarySlug ?? "";
+    const key = `afterword:diary:${slug}`;
+    const form = root.querySelector<HTMLFormElement>("[data-diary-form]");
+    const input = root.querySelector<HTMLInputElement>("[data-diary-password]");
+    const submit = root.querySelector<HTMLButtonElement>("[data-diary-submit]");
+    const status = root.querySelector<HTMLElement>("[data-diary-status]");
+
+    const reveal = (plaintext: string, remembered: boolean) => {
+      content.innerHTML = plaintext;
+      content
+        .querySelectorAll<HTMLElement>(".animate")
+        .forEach((element) => element.classList.add("show"));
+      content.hidden = false;
+      content.classList.add("show");
+      root.hidden = true;
+      if (remembered) {
+        try {
+          sessionStorage.setItem(key, input?.value ?? "");
+        } catch {
+          return;
+        }
+      }
+    };
+
+    const attempt = async (password: string, remembered: boolean) => {
+      if (!password) {
+        if (status) {
+          status.textContent = "请输入密码。";
+        }
+        return;
+      }
+
+      if (submit) {
+        submit.disabled = true;
+      }
+      if (status) {
+        status.textContent = "正在解密…";
+      }
+
+      try {
+        const plaintext = await decryptAll(password);
+        reveal(plaintext, remembered);
+      } catch {
+        if (status) {
+          status.textContent = "密码不正确，或这篇日记的密文已失效。";
+        }
+        try {
+          sessionStorage.removeItem(key);
+        } catch {
+          return;
+        }
+      } finally {
+        if (submit) {
+          submit.disabled = false;
+        }
+      }
+    };
+
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void attempt(input?.value ?? "", true);
+    });
+
+    try {
+      const remembered = sessionStorage.getItem(key);
+      if (remembered) {
+        await attempt(remembered, true);
+      }
+    } catch {
+      return;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => void initDiaryVault());
+  document.addEventListener("astro:after-swap", () => void initDiaryVault());
+  void initDiaryVault();
+</script>

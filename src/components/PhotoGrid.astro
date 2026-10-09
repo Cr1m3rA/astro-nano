@@ -1,0 +1,73 @@
+---
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import { readPhotoExif } from "@lib/photo";
+import { cn } from "@lib/utils";
+
+export type PhotoGridItem = {
+  src: ImageMetadata;
+  alt: string;
+  caption?: string;
+};
+
+type Props = {
+  photos: PhotoGridItem[];
+  columns?: 2 | 3;
+  class?: string;
+};
+
+const { photos, columns = 2, class: className } = Astro.props;
+
+const exifList = await Promise.all(
+  photos.map((photo) => readPhotoExif(photo.src.src))
+);
+---
+
+<div
+  class={cn(
+    "my-8 gap-3 [column-fill:balance]",
+    columns === 2 ? "columns-1 sm:columns-2" : "columns-1 sm:columns-2 lg:columns-3",
+    className
+  )}
+>
+  {
+    photos.map((photo, index) => (
+      <figure class="mb-3 break-inside-avoid space-y-2">
+        <Image
+          src={photo.src}
+          alt={photo.alt}
+          widths={[480, 768, 1024, 1440]}
+          sizes={
+            columns === 2
+              ? "(min-width: 640px) 45vw, 100vw"
+              : "(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
+          }
+          class="photo-surface h-auto w-full rounded-lg"
+          loading="lazy"
+          decoding="async"
+          data-lightbox-source
+        />
+        {
+          (photo.caption || exifList[index]?.dimensions) && (
+            <figcaption class="space-y-0.5 text-xs opacity-70">
+              {photo.caption && <p>{photo.caption}</p>}
+              {exifList[index]?.dimensions && (
+                <p class="opacity-70">
+                  {[
+                    exifList[index]?.camera,
+                    exifList[index]?.focalLength,
+                    exifList[index]?.aperture,
+                    exifList[index]?.shutter,
+                    exifList[index]?.iso,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || exifList[index]?.dimensions}
+                </p>
+              )}
+            </figcaption>
+          )
+        }
+      </figure>
+    ))
+  }
+</div>

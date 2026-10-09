@@ -1,0 +1,55 @@
+---
+import { getCollection } from "astro:content";
+import PageLayout from "@layouts/PageLayout.astro";
+import Container from "@components/Container.astro";
+import PhotoCard from "@components/PhotoCard.astro";
+import YearIcon from "@components/icons/YearIcon.astro";
+import { PHOTOGRAPHY } from "@consts";
+import { groupByYear } from "@lib/utils";
+
+// 同一天开始的两组影集（如都从 10-01 开始）需要有明确的先后，
+// 否则会退化成 slug 字母序这种无意义的顺序。这里按结束日期倒序，
+// 即「最近拍完的排前面」。
+const entries = (await getCollection("photography"))
+  .filter((item) => !item.data.draft)
+  .sort((a, b) => {
+    const aEnd = (a.data.dateEnd ?? a.data.date).valueOf();
+    const bEnd = (b.data.dateEnd ?? b.data.date).valueOf();
+    return bEnd - aEnd;
+  });
+const groups = groupByYear(entries, (item) => item.data.date, "desc");
+---
+
+<PageLayout title={PHOTOGRAPHY.TITLE} description={PHOTOGRAPHY.DESCRIPTION}>
+  <Container>
+    <div class="space-y-10">
+      <div class="animate font-semibold text-black dark:text-white">
+        Photography
+      </div>
+      {
+        entries.length === 0 && (
+          <p class="animate text-sm opacity-75">还没有摄影作品。</p>
+        )
+      }
+      <div class="space-y-8">
+        {
+          groups.map((group) => (
+            <section class="animate space-y-4">
+              <div class="flex items-center gap-2 font-semibold text-black dark:text-white">
+                <YearIcon year={group.year} size={16} />
+                <span>{group.year}</span>
+              </div>
+              <ul class="flex flex-col gap-4">
+                {group.entries.map((entry) => (
+                  <li>
+                    <PhotoCard entry={entry} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+  </Container>
+</PageLayout>

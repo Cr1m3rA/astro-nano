@@ -1,0 +1,172 @@
+---
+import { Image } from "astro:assets";
+import type { CollectionEntry } from "astro:content";
+import { getPhotoGallery } from "@lib/gallery";
+import { formatDateRange, excerpt, cn } from "@lib/utils";
+
+type Props = {
+  entry: CollectionEntry<"photography">;
+};
+
+const { entry } = Astro.props;
+const all = await getPhotoGallery(entry.slug);
+
+// 每档张数刚好填满网格，不留空格：
+//   mosaic 4 列上大图占 2×2，余下 2×2 必须放满 4 张小图；手机是 2 列，同样整除
+//   trio   3 列上大图占 2×2，余下一列放 2 张竖排
+//   quad   2×2 四宫格
+const limitFor = {
+  mosaic: 5,
+  quad: 4,
+  trio: 3,
+  duo: 2,
+  single: 1,
+  fan: 5,
+} as const;
+
+const layout =
+  entry.data.preview ??
+  (all.length >= 5
+    ? "mosaic"
+    : all.length === 4
+      ? "quad"
+      : all.length === 3
+        ? "trio"
+        : all.length === 2
+          ? "duo"
+          : "single");
+
+const preview = all.slice(0, limitFor[layout]);
+const hasPreview = preview.length > 0;
+
+const leadIndex = (() => {
+  const wide = preview.findIndex((photo) => photo.orientation === "landscape");
+  return wide === -1 ? 0 : wide;
+})();
+const lead = preview[leadIndex];
+const others = preview.filter((_, index) => index !== leadIndex);
+const heroFramed = layout === "mosaic" || layout === "trio";
+---
+
+<a
+  href={`/photography/${entry.slug}`}
+  class="group relative block overflow-hidden rounded-lg border border-black/15 transition-colors duration-300 ease-in-out hover:border-black/30 hover:bg-black/5 hover:text-black hover:dark:text-white dark:border-white/20 dark:hover:border-white/35 dark:hover:bg-white/5"
+>
+  <div class={cn("space-y-3", hasPreview && "p-3")}>
+    {
+      hasPreview && (
+        <div
+          class={cn(
+            "gap-2",
+            layout === "mosaic" && "grid grid-cols-2 sm:grid-cols-4",
+            layout === "trio" && "grid grid-cols-2 sm:grid-cols-3",
+            (layout === "quad" || layout === "duo") && "grid grid-cols-2",
+            layout === "fan" && "flex h-52 items-center justify-center",
+            layout === "single" && "grid grid-cols-1"
+          )}
+        >
+          {layout === "quad" &&
+            preview.map((photo) => (
+              <Image
+                src={photo.src}
+                alt=""
+                widths={[320, 480, 768]}
+                sizes="(min-width: 640px) 22vw, 45vw"
+                class="h-40 w-full rounded object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+
+          {layout === "duo" &&
+            preview.map((photo) => (
+              <Image
+                src={photo.src}
+                alt=""
+                widths={[320, 480, 768]}
+                sizes="(min-width: 640px) 22vw, 45vw"
+                class={cn(
+                  "w-full rounded object-cover",
+                  photo.orientation === "portrait" ? "h-52" : "h-40"
+                )}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+
+          {layout === "single" && lead && (
+            <Image
+              src={lead.src}
+              alt=""
+              widths={[480, 768]}
+              sizes="(min-width: 640px) 600px, 100vw"
+              class="h-52 w-full rounded object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+
+          {layout === "fan" &&
+            preview.map((photo, index) => (
+              <Image
+                src={photo.src}
+                alt=""
+                widths={[320, 480]}
+                sizes="200px"
+                style={{
+                  zIndex: index + 1,
+                  marginLeft: index === 0 ? "0" : "-18%",
+                  rotate: `${(index - (preview.length - 1) / 2) * 7}deg`,
+                }}
+                class="photo-surface h-40 w-auto max-w-[38%] rounded object-cover transition-transform duration-300 ease-in-out group-hover:rotate-0"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+
+          {heroFramed && lead && (
+            <div class="col-span-2 row-span-2">
+              <Image
+                src={lead.src}
+                alt=""
+                widths={[480, 768]}
+                sizes="(min-width: 640px) 40vw, 100vw"
+                class="h-52 w-full rounded object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          )}
+
+          {heroFramed &&
+            others.map((photo) => (
+              <Image
+                src={photo.src}
+                alt=""
+                widths={[320, 480]}
+                sizes="(min-width: 640px) 12vw, 45vw"
+                class="h-[100px] w-full rounded object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+        </div>
+      )
+    }
+
+    <div
+      class={cn(
+        "flex items-baseline justify-between gap-3",
+        !hasPreview && "p-3"
+      )}
+    >
+      <div class="min-w-0 truncate font-semibold">{entry.data.title}</div>
+      <div class="shrink-0 text-sm opacity-70">
+        {formatDateRange(entry.data.date, entry.data.dateEnd)}
+      </div>
+    </div>
+    <div class="truncate text-sm opacity-75">
+      {entry.data.description ?? excerpt(entry.body)}
+    </div>
+  </div>
+</a>

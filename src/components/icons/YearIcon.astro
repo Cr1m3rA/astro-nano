@@ -1,0 +1,20 @@
+---
+import { getYearIcon, getYearIconLabel } from "@lib/calendar";
+import { cn } from "@lib/utils";
+
+type Props = {
+  year: number;
+  size?: number;
+  class?: string;
+};
+
+const { year, size = 16, class: className } = Astro.props;
+const Icon = getYearIcon(year);
+---
+
+<Icon
+  size={size}
+  stroke-width={1.5}
+  aria-label={getYearIconLabel(year)}
+  class={cn("shrink-0", className)}
+/>

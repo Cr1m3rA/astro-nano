@@ -1,0 +1,32 @@
+---
+import { getEntry } from "astro:content";
+import PageLayout from "@layouts/PageLayout.astro";
+import Container from "@components/Container.astro";
+import ActivityCalendar from "@components/ActivityCalendar.astro";
+import { ABOUT } from "@consts";
+
+const entry = await getEntry("pages", "about");
+if (!entry) {
+  throw new Error("找不到 src/content/pages/about.md");
+}
+const { Content } = await entry.render();
+---
+
+<PageLayout title={ABOUT.TITLE} description={ABOUT.DESCRIPTION}>
+  <Container>
+    <div class="space-y-10">
+      <div class="animate font-semibold text-black dark:text-white">
+        About
+      </div>
+      <div class="space-y-10">
+        <article class="animate">
+          <Content />
+        </article>
+        <div class="space-y-4">
+          <h5 class="font-semibold text-black dark:text-white">更新记录</h5>
+          <ActivityCalendar />
+        </div>
+      </div>
+    </div>
+  </Container>
+</PageLayout>

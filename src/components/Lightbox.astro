@@ -1,0 +1,298 @@
+---
+type Props = {
+  scope?: string;
+};
+
+const { scope = "article" } = Astro.props;
+---
+
+<dialog
+  data-lightbox
+  data-lightbox-scope={scope}
+  class="fixed inset-0 m-0 h-full w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-stone-950/85 backdrop:backdrop-blur-sm"
+>
+  <div class="flex h-full w-full items-center justify-center p-4 sm:p-8">
+    <figure class="flex max-h-full max-w-full flex-col items-center gap-3">
+      <img
+        data-lightbox-image
+        alt=""
+        class="max-h-[76vh] max-w-full cursor-zoom-out rounded-lg object-contain shadow-2xl"
+      />
+      <div
+        data-lightbox-counter
+        class="shrink-0 rounded-full bg-stone-800/70 px-3 py-1 text-xs tabular-nums tracking-widest text-stone-200 backdrop-blur-sm empty:hidden"
+      ></div>
+      <figcaption
+        data-lightbox-caption
+        class="max-w-2xl shrink-0 text-center text-sm text-stone-300 empty:hidden"
+      ></figcaption>
+    </figure>
+  </div>
+
+  <button
+    type="button"
+    data-lightbox-prev
+    aria-label="上一张"
+    class="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-stone-800/70 text-stone-100 backdrop-blur-sm transition-colors duration-200 ease-in-out hover:bg-stone-700/90 sm:left-5 sm:size-12"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-5 stroke-2 fill-none stroke-current">
+      <polyline points="15 5 8 12 15 19" />
+    </svg>
+  </button>
+
+  <button
+    type="button"
+    data-lightbox-next
+    aria-label="下一张"
+    class="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-stone-800/70 text-stone-100 backdrop-blur-sm transition-colors duration-200 ease-in-out hover:bg-stone-700/90 sm:right-5 sm:size-12"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-5 stroke-2 fill-none stroke-current">
+      <polyline points="9 5 16 12 9 19" />
+    </svg>
+  </button>
+
+  <button
+    type="button"
+    data-lightbox-close
+    aria-label="关闭"
+    class="absolute right-3 top-3 flex size-9 items-center justify-center rounded-full bg-stone-800/70 text-stone-100 backdrop-blur-sm transition-colors duration-200 ease-in-out hover:bg-stone-700/90 sm:right-5 sm:top-5"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-4 stroke-2 fill-none stroke-current">
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
+  </button>
+</dialog>
+
+<script>
+  const IMAGE_SELECTOR = "img[data-lightbox-source]";
+  const state: { images: HTMLImageElement[]; index: number } = {
+    images: [],
+    index: 0,
+  };
+
+  function dialogEl(): HTMLDialogElement | null {
+    return document.querySelector<HTMLDialogElement>("[data-lightbox]");
+  }
+
+  function collectImages(): HTMLImageElement[] {
+    const dialog = dialogEl();
+    const scope = dialog?.getAttribute("data-lightbox-scope") ?? "article";
+    const found = Array.from(
+      document.querySelectorAll<HTMLImageElement>(`${scope} ${IMAGE_SELECTOR}`)
+    );
+    const unique: HTMLImageElement[] = [];
+    for (const image of found) {
+      if (!unique.includes(image) && image.dataset.lightboxIgnore !== "1") {
+        unique.push(image);
+        image.style.cursor = "zoom-in";
+      }
+    }
+    return unique;
+  }
+
+  function bestSource(image: HTMLImageElement): string {
+    const srcset = image.getAttribute("srcset");
+    if (srcset) {
+      let best = "";
+      let bestWidth = -1;
+      for (const entry of srcset.split(",")) {
+        const [url, descriptor = ""] = entry.trim().split(/\s+/);
+        if (!url || url.startsWith("data:")) {
+          continue;
+        }
+        const width = descriptor.endsWith("w")
+          ? Number.parseInt(descriptor, 10)
+          : descriptor.endsWith("x")
+            ? Number.parseFloat(descriptor) * (image.naturalWidth || 1)
+            : 0;
+        if (width > bestWidth) {
+          bestWidth = width;
+          best = url;
+        }
+      }
+      if (best) {
+        return best;
+      }
+    }
+    return image.currentSrc || image.src;
+  }
+
+  function describe(image: HTMLImageElement): string {
+    const figure = image.closest("figure");
+    const caption = figure?.querySelector("figcaption");
+    const text = caption?.textContent?.replace(/\s+/g, " ").trim();
+    return text || image.getAttribute("alt") || "";
+  }
+
+  function render(offset: number) {
+    const dialog = dialogEl();
+    const image = dialog?.querySelector<HTMLImageElement>("[data-lightbox-image]");
+    const caption = dialog?.querySelector<HTMLElement>("[data-lightbox-caption]");
+    if (!image || state.images.length === 0) {
+      return;
+    }
+
+    state.index =
+      (state.index + offset + state.images.length) % state.images.length;
+
+    const source = state.images[state.index];
+    image.src = bestSource(source);
+    image.alt = source.alt || "";
+    if (caption) {
+      caption.textContent = describe(source);
+    }
+    updateChrome();
+  }
+
+  function updateChrome() {
+    const dialog = dialogEl();
+    if (!dialog) {
+      return;
+    }
+    const counter = dialog.querySelector<HTMLElement>("[data-lightbox-counter]");
+    const total = state.images.length;
+
+    if (counter) {
+      counter.textContent = total > 1 ? `${state.index + 1} / ${total}` : "";
+    }
+
+    const single = total <= 1;
+    for (const selector of ["[data-lightbox-prev]", "[data-lightbox-next]"]) {
+      const button = dialog.querySelector<HTMLButtonElement>(selector);
+      if (button) {
+        button.hidden = single;
+      }
+    }
+  }
+
+  function open(target: HTMLImageElement) {
+    const dialog = dialogEl();
+    if (!dialog) {
+      return;
+    }
+    state.images = collectImages();
+    const found = state.images.indexOf(target);
+    state.index = found === -1 ? 0 : found;
+
+    const image = dialog.querySelector<HTMLImageElement>("[data-lightbox-image]");
+    const caption = dialog.querySelector<HTMLElement>("[data-lightbox-caption]");
+    if (image) {
+      image.src = bestSource(target);
+      image.alt = target.alt || "";
+    }
+    if (caption) {
+      caption.textContent = describe(target);
+    }
+
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+    updateChrome();
+  }
+
+  function close() {
+    const dialog = dialogEl();
+    if (!dialog) {
+      return;
+    }
+    if (typeof dialog.close === "function" && dialog.open) {
+      dialog.close();
+    } else {
+      dialog.removeAttribute("open");
+    }
+  }
+
+  function teardown() {
+    const dialog = dialogEl();
+    const image = dialog?.querySelector<HTMLImageElement>("[data-lightbox-image]");
+    const caption = dialog?.querySelector<HTMLElement>("[data-lightbox-caption]");
+    image?.removeAttribute("src");
+    if (caption) {
+      caption.textContent = "";
+    }
+    const counter = dialog?.querySelector<HTMLElement>("[data-lightbox-counter]");
+    if (counter) {
+      counter.textContent = "";
+    }
+    state.images = [];
+    state.index = 0;
+  }
+
+  const globalScope = window as typeof window & { __awLightboxBound?: boolean };
+
+  if (!globalScope.__awLightboxBound) {
+    globalScope.__awLightboxBound = true;
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const dialog = dialogEl();
+      if (!dialog) {
+        return;
+      }
+      if (target.closest("[data-lightbox-prev]")) {
+        event.preventDefault();
+        render(-1);
+        return;
+      }
+      if (target.closest("[data-lightbox-next]")) {
+        event.preventDefault();
+        render(1);
+        return;
+      }
+      if (target.closest("[data-lightbox-close]")) {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (!(target instanceof HTMLImageElement)) {
+        return;
+      }
+      if (target === dialog.querySelector("[data-lightbox-image]")) {
+        event.preventDefault();
+        render(1);
+        return;
+      }
+      if (!target.matches(IMAGE_SELECTOR) && !target.closest(IMAGE_SELECTOR)) {
+        return;
+      }
+      event.preventDefault();
+      open(target);
+    });
+
+    document.addEventListener("click", (event) => {
+      const dialog = dialogEl();
+      if (dialog && event.target === dialog) {
+        close();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const dialog = dialogEl();
+      if (!dialog?.open) {
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        render(1);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        render(-1);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    });
+
+    document.addEventListener("close", (event) => {
+      if (event.target instanceof HTMLDialogElement) {
+        teardown();
+      }
+    }, true);
+  }
+</script>

@@ -2,9 +2,9 @@
 import { type CollectionEntry, getCollection } from "astro:content";
 import PageLayout from "@layouts/PageLayout.astro";
 import Container from "@components/Container.astro";
-import FormattedDate from "@components/FormattedDate.astro";
-import { readingTime } from "@lib/utils";
 import BackToPrev from "@components/BackToPrev.astro";
+import Byline from "@components/Byline.astro";
+import { excerpt } from "@lib/utils";
 
 export async function getStaticPaths() {
   const posts = (await getCollection("blog"))
@@ -21,7 +21,10 @@ const post = Astro.props;
 const { Content } = await post.render();
 ---
 
-<PageLayout title={post.data.title} description={post.data.description}>
+<PageLayout
+  title={post.data.title}
+  description={post.data.description ?? excerpt(post.body, 160)}
+>
   <Container>
     <div class="animate">
       <BackToPrev href="/blog">
@@ -29,15 +32,11 @@ const { Content } = await post.render();
       </BackToPrev>
     </div>
     <div class="space-y-1 my-10">
-      <div class="animate flex items-center gap-1.5">
-        <div class="font-base text-sm">
-          <FormattedDate date={post.data.date} />
-        </div>
-        &bull;
-        <div class="font-base text-sm">
-          {readingTime(post.body)}
-        </div>
-      </div>
+      <Byline
+        date={post.data.date}
+        author={post.data.author}
+        body={post.body}
+      />
       <div class="animate text-2xl font-semibold text-black dark:text-white">
         {post.data.title}
       </div>

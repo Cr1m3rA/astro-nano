@@ -1,0 +1,58 @@
+---
+import { type CollectionEntry, getCollection } from "astro:content";
+import PageLayout from "@layouts/PageLayout.astro";
+import Container from "@components/Container.astro";
+import BackToPrev from "@components/BackToPrev.astro";
+import Byline from "@components/Byline.astro";
+import DiaryVault from "@components/DiaryVault.astro";
+import { formatFullDate } from "@lib/utils";
+import { isDiaryPublic } from "@lib/diary";
+import { VAULT_START, VAULT_END } from "@lib/vault";
+
+export async function getStaticPaths() {
+  const entries = (await getCollection("diary"))
+    .filter((item) => !item.data.draft)
+    .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+  return entries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: entry,
+  }));
+}
+
+type Props = CollectionEntry<"diary">;
+
+const entry = Astro.props;
+const { Content } = await entry.render();
+const title = formatFullDate(entry.data.date);
+const unlocked = isDiaryPublic(entry.data.date);
+---
+
+<PageLayout title={title} description={title}>
+  <Container>
+    <div class="animate">
+      <BackToPrev href="/diary">
+        Back to diary
+      </BackToPrev>
+    </div>
+    <div class="space-y-1 my-10">
+      <Byline author={entry.data.author} />
+      <div class="animate text-2xl font-semibold text-black dark:text-white">
+        {title}
+      </div>
+    </div>
+    {unlocked ? (
+      <article class="animate">
+        <Content />
+      </article>
+    ) : (
+      <>
+        <DiaryVault slug={entry.slug} />
+        <Fragment set:html={VAULT_START} />
+        <article class="animate">
+          <Content />
+        </article>
+        <Fragment set:html={VAULT_END} />
+      </>
+    )}
+  </Container>
+</PageLayout>

@@ -4,32 +4,41 @@ const blog = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    description: z.string(),
+    description: z.string().optional(),
     date: z.coerce.date(),
-    draft: z.boolean().optional()
+    author: z.string().optional(),
+    draft: z.boolean().optional(),
   }),
 });
 
-const work = defineCollection({
+const diary = defineCollection({
   type: "content",
   schema: z.object({
-    company: z.string(),
-    role: z.string(),
-    dateStart: z.coerce.date(),
-    dateEnd: z.union([z.coerce.date(), z.string()]),
+    date: z.coerce.date(),
+    author: z.string().optional(),
+    draft: z.boolean().optional(),
   }),
 });
 
-const projects = defineCollection({
+const photography = defineCollection({
+  type: "content",
+  schema: z.object({
+    title: z.string(),
+    description: z.string().optional(),
+    date: z.coerce.date(),
+    dateEnd: z.coerce.date().optional(),
+    author: z.string().optional(),
+    preview: z.enum(["mosaic", "duo", "fan", "single"]).optional(),
+    draft: z.boolean().optional(),
+  }),
+});
+
+const pages = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
     description: z.string(),
-    date: z.coerce.date(),
-    draft: z.boolean().optional(),
-    demoURL: z.string().optional(),
-    repoURL: z.string().optional()
   }),
 });
 
-export const collections = { blog, work, projects };
+export const collections = { blog, diary, photography, pages };
